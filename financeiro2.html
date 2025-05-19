@@ -1,0 +1,2488 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestão - Ampla Contabilidade</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                    }
+                }
+            }
+        }
+        
+        // Detecta tema preferido
+        if (localStorage.getItem('color-theme') === 'dark' || 
+            (!localStorage.getItem('color-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    </script>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen flex flex-col">
+    <header class="bg-white dark:bg-gray-800 shadow-md">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center flex-wrap">
+            <div class="flex items-center space-x-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                <h1 class="text-xl md:text-2xl font-bold">Sistema de Gestão Ampla</h1>
+            </div>
+            <div class="flex items-center mt-2 sm:mt-0 space-x-4">
+                <div id="notification-bell" class="relative">
+                    <button class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        <span id="notification-count" class="hidden absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                    </button>
+                </div>
+                <button id="theme-toggle" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none">
+                    <svg id="theme-toggle-dark-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                    </svg>
+                    <svg id="theme-toggle-light-icon" class="w-6 h-6 hidden" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-col md:flex-row flex-grow">
+        <!-- Navegação lateral -->
+        <aside class="bg-white dark:bg-gray-800 w-full md:w-64 shadow-md md:min-h-screen">
+            <nav class="p-4">
+                <ul>
+                    <li class="mb-2">
+                        <a href="#" class="nav-link flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 active-nav" data-tab="dashboard">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                            </svg>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="nav-link flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" data-tab="clients">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                            </svg>
+                            Clientes
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="nav-link flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" data-tab="billing">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                            Faturamento
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="nav-link flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" data-tab="financial">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                            </svg>
+                            Financeiro
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="nav-link flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" data-tab="import">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                            </svg>
+                            Importação
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="nav-link flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" data-tab="reports">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Relatórios
+                        </a>
+                    </li>
+                    <li class="mb-2">
+                        <a href="#" class="nav-link flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" data-tab="settings">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            Configurações
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Conteúdo principal -->
+        <main class="flex-grow p-4 md:p-6">
+            <!-- Conteúdo das abas -->
+            
+            <!-- Dashboard -->
+            <div id="dashboard-tab" class="tab-content">
+                <div class="mb-6">
+                    <h2 class="text-xl md:text-2xl font-bold mb-4">Dashboard</h2>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                        <h3 class="text-base font-semibold mb-2">Total de Clientes</h3>
+                        <p class="text-3xl font-bold text-primary"><span id="dashboard-client-count">0</span></p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Ativos: <span id="dashboard-active-clients">0</span></p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                        <h3 class="text-base font-semibold mb-2">Faturamento Mensal</h3>
+                        <p class="text-3xl font-bold text-green-500">R$ <span id="dashboard-monthly-revenue">0.00</span></p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Recebido: R$ <span id="dashboard-received">0.00</span></p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                        <h3 class="text-base font-semibold mb-2">Saldo Atual</h3>
+                        <p class="text-3xl font-bold text-blue-500">R$ <span id="dashboard-balance">0.00</span></p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Última atualização: <span id="dashboard-last-update">19/05/2025</span></p>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">Status dos Pagamentos</h3>
+                        <div class="h-64">
+                            <canvas id="payment-status-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">Faturamento x Recebimento</h3>
+                        <div class="h-64">
+                            <canvas id="revenue-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 mb-6">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-semibold">Boletos a Vencer</h3>
+                            <a href="#" class="text-primary hover:underline text-sm" data-tab="billing">Ver todos</a>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vencimento</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valor</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="upcoming-payments" class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                                    <!-- Dados serão inseridos aqui -->
+                                    <tr>
+                                        <td colspan="4" class="px-6 py-4 text-center">Carregando boletos pendentes...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Clientes -->
+            <div id="clients-tab" class="tab-content hidden">
+                <div class="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                    <h2 class="text-xl md:text-2xl font-bold">Clientes</h2>
+                    <div class="flex gap-2">
+                        <button id="new-client-btn" class="bg-primary hover:bg-opacity-90 text-white px-4 py-2 rounded-lg flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Novo Cliente
+                        </button>
+                        <button id="export-clients-btn" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-4 py-2 rounded-lg flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            </svg>
+                            Exportar
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+                    <div class="p-4">
+                        <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                            <div class="w-full md:w-1/2">
+                                <div class="relative">
+                                    <input id="client-search" type="text" class="w-full p-3 pl-10 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary" placeholder="Buscar clientes...">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <div>
+                                    <select id="city-filter" class="p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                        <option value="">Todas as Cidades</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <select id="status-filter" class="p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                        <option value="">Todos os Status</option>
+                                        <option value="active">Ativos</option>
+                                        <option value="inactive">Inativos</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="overflow-auto">
+                            <table id="clients-table" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Código</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nome</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">CNPJ/CPF</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cidade</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">UF</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700" id="client-list">
+                                    <!-- Cliente rows will be inserted here -->
+                                    <tr>
+                                        <td colspan="7" class="px-6 py-4 text-center">Carregando dados de clientes...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+                            <span id="client-count">0</span> clientes encontrados
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Ficha do Cliente (inicialmente oculta) -->
+            <div id="client-details-tab" class="tab-content hidden">
+                <div class="mb-6 flex justify-between items-center">
+                    <h2 class="text-xl md:text-2xl font-bold flex items-center">
+                        <button id="back-to-clients" class="mr-2 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                            </svg>
+                        </button>
+                        <span id="client-detail-name">Detalhes do Cliente</span>
+                    </h2>
+                    <div class="flex gap-2">
+                        <button id="edit-client-btn" class="bg-primary hover:bg-opacity-90 text-white px-4 py-2 rounded-lg flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            Editar
+                        </button>
+                        <button id="new-invoice-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            Novo Boleto
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <!-- Informações básicas do cliente -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 lg:col-span-2">
+                        <h3 class="text-lg font-semibold mb-4">Informações do Cliente</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Código</p>
+                                <p id="client-code" class="font-medium">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">CNPJ/CPF</p>
+                                <p id="client-document" class="font-medium">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Endereço</p>
+                                <p id="client-address" class="font-medium">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Cidade/UF</p>
+                                <p id="client-city-state" class="font-medium">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Telefone</p>
+                                <p id="client-phone" class="font-medium">-</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Email</p>
+                                <p id="client-email" class="font-medium">-</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Informações financeiras do cliente -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">Financeiro</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Valor do Contrato</p>
+                                <p id="client-contract-value" class="text-xl font-bold text-primary">R$ 0,00</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Saldo a Receber</p>
+                                <p id="client-balance" class="text-xl font-bold text-amber-500">R$ 0,00</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Permuta</p>
+                                <p id="client-exchange" class="text-lg">Não</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Dia de Vencimento</p>
+                                <p id="client-due-day" class="text-lg">10</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Abas secundárias para detalhes do cliente -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+                    <div class="border-b border-gray-200 dark:border-gray-700">
+                        <nav class="flex flex-wrap">
+                            <button class="client-detail-tab px-6 py-3 border-b-2 border-primary text-primary font-medium" data-tab="invoices">Faturas</button>
+                            <button class="client-detail-tab px-6 py-3 border-b-2 border-transparent hover:text-primary hover:border-gray-300 font-medium" data-tab="payments">Pagamentos</button>
+                            <button class="client-detail-tab px-6 py-3 border-b-2 border-transparent hover:text-primary hover:border-gray-300 font-medium" data-tab="contracts">Contratos</button>
+                            <button class="client-detail-tab px-6 py-3 border-b-2 border-transparent hover:text-primary hover:border-gray-300 font-medium" data-tab="notes">Anotações</button>
+                        </nav>
+                    </div>
+                    
+                    <div class="p-6">
+                        <!-- Conteúdo das abas de detalhes do cliente -->
+                        <div id="invoices-tab" class="client-detail-content">
+                            <div class="mb-4 flex justify-between items-center">
+                                <h4 class="text-lg font-medium">Faturas</h4>
+                                <div class="flex gap-2">
+                                    <select id="invoice-status-filter" class="p-2 text-sm rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                        <option value="">Todos os Status</option>
+                                        <option value="LIQUIDADO">Liquidados</option>
+                                        <option value="VENCIDO">Vencidos</option>
+                                        <option value="EM CARTEIRA">Em Carteira</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead class="bg-gray-50 dark:bg-gray-800">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nº Documento</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Emissão</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vencimento</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valor</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Liquidação</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="client-invoices" class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                                        <tr>
+                                            <td colspan="7" class="px-6 py-4 text-center">Carregando faturas...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div id="payments-tab" class="client-detail-content hidden">
+                            <div class="mb-4 flex justify-between items-center">
+                                <h4 class="text-lg font-medium">Pagamentos</h4>
+                                <div>
+                                    <select id="payment-period-filter" class="p-2 text-sm rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800">
+                                        <option value="all">Todo o período</option>
+                                        <option value="current-month">Mês atual</option>
+                                        <option value="last-month">Mês anterior</option>
+                                        <option value="current-year">Ano atual</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead class="bg-gray-50 dark:bg-gray-800">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descrição</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nº Documento</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valor</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Forma</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="client-payments" class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                                        <tr>
+                                            <td colspan="5" class="px-6 py-4 text-center">Carregando pagamentos...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div id="contracts-tab" class="client-detail-content hidden">
+                            <div class="mb-4 flex justify-between items-center">
+                                <h4 class="text-lg font-medium">Contratos</h4>
+                                <button id="new-contract-btn" class="text-sm bg-primary hover:bg-opacity-90 text-white px-3 py-1 rounded flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
+                                    Novo Contrato
+                                </button>
+                            </div>
+                            <div id="client-contracts" class="space-y-4">
+                                <div class="p-6 border rounded-lg border-gray-200 dark:border-gray-700">
+                                    <div class="flex justify-between mb-2">
+                                        <h5 class="font-semibold">Contrato de Honorários Contábeis</h5>
+                                        <span class="text-green-500 bg-green-100 dark:bg-green-900 px-2 py-1 rounded-full text-xs font-medium">Ativo</span>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                                        <div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">Data de Início</p>
+                                            <p class="font-medium">01/01/2025</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">Valor Mensal</p>
+                                            <p class="font-medium">R$ 759,00</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500 dark:text-gray-400">Dia de Vencimento</p>
+                                            <p class="font-medium">10</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">Observações</p>
+                                        <p class="text-sm">Serviços: Contabilidade, Fiscal, DP. Contrato vigente por tempo indeterminado.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="notes-tab" class="client-detail-content hidden">
+                            <div class="mb-4 flex justify-between items-center">
+                                <h4 class="text-lg font-medium">Anotações</h4>
+                                <button id="new-note-btn" class="text-sm bg-primary hover:bg-opacity-90 text-white px-3 py-1 rounded flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
+                                    Nova Anotação
+                                </button>
+                            </div>
+                            <div id="client-notes" class="space-y-4">
+                                <div class="p-4 border rounded-lg border-gray-200 dark:border-gray-700">
+                                    <div class="flex justify-between mb-2">
+                                        <h5 class="font-semibold">Reunião de alinhamento</h5>
+                                        <span class="text-sm text-gray-500">19/05/2025 14:30</span>
+                                    </div>
+                                    <p class="text-sm">Cliente solicitou envio de relatórios mensais de faturamento por email.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Faturamento -->
+            <div id="billing-tab" class="tab-content hidden">
+                <div class="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                    <h2 class="text-xl md:text-2xl font-bold">Faturamento</h2>
+                    <div class="flex gap-2">
+                        <button id="new-billing-btn" class="bg-primary hover:bg-opacity-90 text-white px-4 py-2 rounded-lg flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Novo Boleto
+                        </button>
+                        <button id="generate-billing-btn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                            </svg>
+                            Gerar Cobrança Mensal
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+                    <div class="p-4">
+                        <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                            <div class="w-full md:w-1/2">
+                                <div class="relative">
+                                    <input id="invoice-search" type="text" class="w-full p-3 pl-10 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary" placeholder="Buscar faturas...">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <div>
+                                    <select id="billing-status-filter" class="p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                        <option value="">Todos os Status</option>
+                                        <option value="LIQUIDADO">Liquidado</option>
+                                        <option value="VENCIDO">Vencido</option>
+                                        <option value="EM CARTEIRA">Em Carteira</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <select id="billing-date-filter" class="p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                        <option value="">Todas as Datas</option>
+                                        <option value="current-month">Mês Atual</option>
+                                        <option value="last-month">Mês Anterior</option>
+                                        <option value="current-year">Ano Atual</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="overflow-auto">
+                            <table id="billing-table" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nosso Número</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cliente</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Emissão</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Vencimento</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valor</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Liquidação</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700" id="billing-list">
+                                    <!-- Billing rows will be inserted here -->
+                                    <tr>
+                                        <td colspan="8" class="px-6 py-4 text-center">Carregando dados de faturamento...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4 flex justify-between">
+                            <div class="text-sm text-gray-500 dark:text-gray-400">
+                                <span id="billing-count">0</span> faturas encontradas
+                            </div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">
+                                Total: R$ <span id="billing-total">0.00</span> | Liquidado: R$ <span id="billing-liquidated">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Financeiro -->
+            <div id="financial-tab" class="tab-content hidden">
+                <div class="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                    <h2 class="text-xl md:text-2xl font-bold">Financeiro</h2>
+                    <div class="flex gap-2">
+                        <button id="new-transaction-btn" class="bg-primary hover:bg-opacity-90 text-white px-4 py-2 rounded-lg flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Nova Transação
+                        </button>
+                        <button id="export-statement-btn" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-4 py-2 rounded-lg flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                            </svg>
+                            Exportar Extrato
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                        <h3 class="text-base font-semibold mb-2">Saldo Atual</h3>
+                        <p class="text-3xl font-bold text-blue-500">R$ <span id="current-balance">25.771,11</span></p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Atualizado em: 19/05/2025</p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                        <h3 class="text-base font-semibold mb-2">Entradas do Mês</h3>
+                        <p class="text-3xl font-bold text-green-500">R$ <span id="month-income">117.882,38</span></p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Maio/2025</p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                        <h3 class="text-base font-semibold mb-2">Saídas do Mês</h3>
+                        <p class="text-3xl font-bold text-red-500">R$ <span id="month-expenses">92.111,27</span></p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Maio/2025</p>
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+                    <div class="p-4">
+                        <div class="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                            <div class="w-full md:w-1/2">
+                                <div class="relative">
+                                    <input id="transaction-search" type="text" class="w-full p-3 pl-10 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary" placeholder="Buscar transações...">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
+                                    </svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <div>
+                                    <select id="transaction-type-filter" class="p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                        <option value="">Todos os Tipos</option>
+                                        <option value="CREDIT">Crédito</option>
+                                        <option value="DEBIT">Débito</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <select id="transaction-date-filter" class="p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                        <option value="">Todas as Datas</option>
+                                        <option value="current-month">Mês Atual</option>
+                                        <option value="last-month">Mês Anterior</option>
+                                        <option value="current-year">Ano Atual</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="overflow-auto">
+                            <table id="transactions-table" class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                <thead class="bg-gray-50 dark:bg-gray-800">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Descrição</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valor</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Saldo</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700" id="transactions-list">
+                                    <!-- Transaction rows will be inserted here -->
+                                    <tr>
+                                        <td colspan="5" class="px-6 py-4 text-center">Carregando dados do extrato...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4 flex justify-between">
+                            <div class="text-sm text-gray-500 dark:text-gray-400">
+                                <span id="transaction-count">0</span> transações encontradas
+                            </div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">
+                                Entradas: R$ <span id="credit-total">0.00</span> | Saídas: R$ <span id="debit-total">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Importação -->
+            <div id="import-tab" class="tab-content hidden">
+                <div class="mb-6">
+                    <h2 class="text-xl md:text-2xl font-bold mb-4">Importação de Arquivos</h2>
+                    <p class="text-gray-600 dark:text-gray-400">Importe dados de clientes, boletos e transações financeiras.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Importação de Clientes -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-3">Importar Clientes</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Formatos suportados: CSV, Excel</p>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Arquivo de Clientes</label>
+                            <div class="flex items-center justify-center w-full">
+                                <label class="flex flex-col w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                        <svg class="w-8 h-8 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                                        </svg>
+                                        <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                                            <span class="font-semibold">Clique para selecionar</span> ou arraste o arquivo
+                                        </p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">CSV, XLS, XLSX</p>
+                                    </div>
+                                    <input id="clients-file" type="file" class="hidden" accept=".csv,.xls,.xlsx" />
+                                </label>
+                            </div>
+                            <div id="clients-file-info" class="mt-2 text-sm text-gray-500 dark:text-gray-400 hidden">
+                                Arquivo selecionado: <span id="clients-filename"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <button id="import-clients-btn" class="bg-primary hover:bg-opacity-90 text-white px-4 py-2 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed">
+                                Importar Clientes
+                            </button>
+                            <span id="clients-import-status" class="ml-3 text-sm"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Importação de Boletos -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-3">Importar Boletos</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Formatos suportados: CNAB400, PDF, CSV</p>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Arquivo de Boletos</label>
+                            <div class="flex items-center justify-center w-full">
+                                <label class="flex flex-col w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                        <svg class="w-8 h-8 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                                        </svg>
+                                        <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                                            <span class="font-semibold">Clique para selecionar</span> ou arraste o arquivo
+                                        </p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">CNAB400, PDF, CSV</p>
+                                    </div>
+                                    <input id="boletos-file" type="file" class="hidden" accept=".rem,.txt,.pdf,.csv" />
+                                </label>
+                            </div>
+                            <div id="boletos-file-info" class="mt-2 text-sm text-gray-500 dark:text-gray-400 hidden">
+                                Arquivo selecionado: <span id="boletos-filename"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <button id="import-boletos-btn" class="bg-primary hover:bg-opacity-90 text-white px-4 py-2 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed">
+                                Importar Boletos
+                            </button>
+                            <span id="boletos-import-status" class="ml-3 text-sm"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Importação de Extrato -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-3">Importar Extrato Bancário</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Formatos suportados: OFX, CSV</p>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Arquivo de Extrato</label>
+                            <div class="flex items-center justify-center w-full">
+                                <label class="flex flex-col w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                        <svg class="w-8 h-8 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                                        </svg>
+                                        <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                                            <span class="font-semibold">Clique para selecionar</span> ou arraste o arquivo
+                                        </p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">OFX, CSV</p>
+                                    </div>
+                                    <input id="extrato-file" type="file" class="hidden" accept=".ofx,.csv" />
+                                </label>
+                            </div>
+                            <div id="extrato-file-info" class="mt-2 text-sm text-gray-500 dark:text-gray-400 hidden">
+                                Arquivo selecionado: <span id="extrato-filename"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <button id="import-extrato-btn" class="bg-primary hover:bg-opacity-90 text-white px-4 py-2 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed">
+                                Importar Extrato
+                            </button>
+                            <span id="extrato-import-status" class="ml-3 text-sm"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Importação de Contratos -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-3">Importar Contratos</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Formatos suportados: Excel, PDF</p>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Arquivo de Contratos</label>
+                            <div class="flex items-center justify-center w-full">
+                                <label class="flex flex-col w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                        <svg class="w-8 h-8 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
+                                        </svg>
+                                        <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                                            <span class="font-semibold">Clique para selecionar</span> ou arraste o arquivo
+                                        </p>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400">XLS, XLSX, PDF</p>
+                                    </div>
+                                    <input id="contratos-file" type="file" class="hidden" accept=".xls,.xlsx,.pdf" />
+                                </label>
+                            </div>
+                            <div id="contratos-file-info" class="mt-2 text-sm text-gray-500 dark:text-gray-400 hidden">
+                                Arquivo selecionado: <span id="contratos-filename"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <button id="import-contratos-btn" class="bg-primary hover:bg-opacity-90 text-white px-4 py-2 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed">
+                                Importar Contratos
+                            </button>
+                            <span id="contratos-import-status" class="ml-3 text-sm"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Histórico de Importações -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <h3 class="text-lg font-semibold mb-4">Histórico de Importações</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead class="bg-gray-50 dark:bg-gray-800">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Data</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tipo</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Arquivo</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Registros</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="import-history" class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">19/05/2025 10:32</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">Boletos</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">relatorioTitulos.pdf</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">100</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                            Concluído
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">19/05/2025 10:30</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">Clientes</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">clientes.csv</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">200</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                            Concluído
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">19/05/2025 10:28</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">Extrato</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">extrato.ofx</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">85</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                            Concluído
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Relatórios -->
+            <div id="reports-tab" class="tab-content hidden">
+                <div class="mb-6">
+                    <h2 class="text-xl md:text-2xl font-bold mb-4">Relatórios</h2>
+                    <p class="text-gray-600 dark:text-gray-400">Gere e exporte relatórios detalhados.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Relatórios Financeiros -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">Relatórios Financeiros</h3>
+                        <ul class="space-y-3">
+                            <li>
+                                <a href="#" class="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <svg class="w-5 h-5 mr-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2v-6a2 2 0 00-2-2H9v2.828l8.586-8.586z"></path>
+                                    </svg>
+                                    Fluxo de Caixa
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <svg class="w-5 h-5 mr-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Faturamento Mensal
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <svg class="w-5 h-5 mr-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Contas a Receber
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <svg class="w-5 h-5 mr-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                    Conciliação Bancária
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Relatórios de Clientes -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">Relatórios de Clientes</h3>
+                        <ul class="space-y-3">
+                            <li>
+                                <a href="#" class="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <svg class="w-5 h-5 mr-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                    </svg>
+                                    Clientes por Cidade
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <svg class="w-5 h-5 mr-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                    </svg>
+                                    Inadimplência de Clientes
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <svg class="w-5 h-5 mr-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                                    </svg>
+                                    Contratos Ativos
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" class="flex items-center p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <svg class="w-5 h-5 mr-3 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    Histórico de Pagamentos
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Criar Relatório Personalizado -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+                    <h3 class="text-lg font-semibold mb-4">Relatório Personalizado</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Relatório</label>
+                            <select class="w-full p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                <option value="">Selecione o tipo de relatório</option>
+                                <option value="financial">Financeiro</option>
+                                <option value="clients">Clientes</option>
+                                <option value="billing">Faturamento</option>
+                                <option value="contracts">Contratos</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Período</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="date" class="p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                <input type="date" class="p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cliente</label>
+                            <select class="w-full p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                <option value="">Todos os clientes</option>
+                                <option value="client1">D'Ange 2 Comércio de Bicho de Pelúcia</option>
+                                <option value="client2">Anápolis Serviços de Vistorias Ltda</option>
+                                <option value="client3">PM Administração e Serviços Ltda</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cidade</label>
+                            <select class="w-full p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                <option value="">Todas as cidades</option>
+                                <option value="goiania">Goiânia</option>
+                                <option value="anapolis">Anápolis</option>
+                                <option value="aparecida">Aparecida de Goiânia</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Situação</label>
+                            <select class="w-full p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                <option value="">Todas as situações</option>
+                                <option value="paid">Pagos</option>
+                                <option value="pending">Pendentes</option>
+                                <option value="overdue">Vencidos</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button class="bg-primary hover:bg-opacity-90 text-white px-4 py-2 rounded-lg">
+                            Gerar Relatório
+                        </button>
+                        <button class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-4 py-2 rounded-lg flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            Exportar PDF
+                        </button>
+                        <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            Exportar Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Configurações -->
+            <div id="settings-tab" class="tab-content hidden">
+                <div class="mb-6">
+                    <h2 class="text-xl md:text-2xl font-bold mb-4">Configurações</h2>
+                    <p class="text-gray-600 dark:text-gray-400">Personalize as configurações da aplicação.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Configurações da Empresa -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">Dados da Empresa</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome da Empresa</label>
+                                <input type="text" value="Ampla Contabilidade Ltda ME" class="w-full p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CNPJ</label>
+                                <input type="text" value="23.893.032/0001-69" class="w-full p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Endereço</label>
+                                <input type="text" value="Av. Nossa Senhora de Fátima, 278" class="w-full p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Cidade</label>
+                                    <input type="text" value="Goiânia" class="w-full p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">UF</label>
+                                    <input type="text" value="GO" class="w-full p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">E-mail</label>
+                                <input type="email" value="contato@amplacontabilidade.com.br" class="w-full p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Telefone</label>
+                                <input type="text" value="(62) 3333-1234" class="w-full p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Configurações do Sistema -->
+                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                        <h3 class="text-lg font-semibold mb-4">Configurações do Sistema</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tema do Sistema</label>
+                                <select id="theme-select" class="w-full p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                    <option value="auto">Automático (baseado no sistema)</option>
+                                    <option value="light">Claro</option>
+                                    <option value="dark">Escuro</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Dia Padrão para Vencimento</label>
+                                <input type="number" min="1" max="31" value="10" class="w-full p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Formato de Data</label>
+                                <select class="w-full p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                    <option value="dd/mm/yyyy">DD/MM/AAAA</option>
+                                    <option value="mm/dd/yyyy">MM/DD/AAAA</option>
+                                    <option value="yyyy-mm-dd">AAAA-MM-DD</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Formato de Moeda</label>
+                                <select class="w-full p-3 text-base rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-primary focus:border-primary">
+                                    <option value="BRL">R$ (Real Brasileiro)</option>
+                                    <option value="USD">$ (Dólar Americano)</option>
+                                    <option value="EUR">€ (Euro)</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="backup-auto" class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded" checked>
+                                <label for="backup-auto" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                                    Backup automático de dados
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="notifications" class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded" checked>
+                                <label for="notifications" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                                    Notificações de boletos vencendo
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Configurações de Banco de Dados -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+                    <h3 class="text-lg font-semibold mb-4">Banco de Dados</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <div class="mb-4">
+                                <button id="backup-db-btn" class="bg-primary hover:bg-opacity-90 text-white px-4 py-2 rounded-lg flex items-center">
+                                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                                    </svg>
+                                    Fazer Backup
+                                </button>
+                            </div>
+                            <div class="mb-4">
+                                <button id="restore-db-btn" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-4 py-2 rounded-lg flex items-center">
+                                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                                    </svg>
+                                    Restaurar Backup
+                                </button>
+                            </div>
+                            <div>
+                                <button id="clear-data-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center">
+                                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                    Limpar Todos os Dados
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Último backup:</p>
+                            <p class="font-medium mb-4">19/05/2025 09:15</p>
+                            
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Tamanho do banco de dados:</p>
+                            <p class="font-medium mb-4">32.45 MB</p>
+                            
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-2">Armazenamento utilizado:</p>
+                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-1">
+                                <div class="bg-primary h-2.5 rounded-full" style="width: 25%"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">32.45 MB de 128 MB (25%)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer class="bg-white dark:bg-gray-800 shadow-md mt-auto">
+        <div class="container mx-auto px-4 py-3">
+            <p class="text-center text-sm text-gray-600 dark:text-gray-400">
+                &copy; 2025 Ampla Contabilidade. Todos os direitos reservados. v1.0.0
+            </p>
+        </div>
+    </footer>
+
+    <!-- Modais e diálogos (inicialmente ocultos) serão adicionados aqui -->
+    
+    <!-- Script para funcionalidade -->
+    <script>
+        // Banco de dados local
+        const localDB = {
+            clients: [],
+            billings: [],
+            transactions: [],
+            contracts: [],
+            notes: [],
+            payments: [],
+            
+            // Salvar no localStorage
+            save() {
+                try {
+                    localStorage.setItem('amplaDB', JSON.stringify({
+                        clients: this.clients,
+                        billings: this.billings,
+                        transactions: this.transactions,
+                        contracts: this.contracts,
+                        notes: this.notes,
+                        payments: this.payments
+                    }));
+                    return true;
+                } catch (error) {
+                    console.error('Erro ao salvar no localStorage:', error);
+                    return false;
+                }
+            },
+            
+            // Carregar do localStorage
+            load() {
+                try {
+                    const data = localStorage.getItem('amplaDB');
+                    if (data) {
+                        const parsedData = JSON.parse(data);
+                        this.clients = parsedData.clients || [];
+                        this.billings = parsedData.billings || [];
+                        this.transactions = parsedData.transactions || [];
+                        this.contracts = parsedData.contracts || [];
+                        this.notes = parsedData.notes || [];
+                        this.payments = parsedData.payments || [];
+                        return true;
+                    }
+                    return false;
+                } catch (error) {
+                    console.error('Erro ao carregar do localStorage:', error);
+                    return false;
+                }
+            }
+        };
+
+        // Funções de inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            // Carregar banco de dados
+            localDB.load();
+            
+            // Ativar tema
+            setThemeIcons();
+
+            // Inicializar tabs
+            initTabNavigation();
+            
+            // Inicializar formulários de importação
+            setupImportForms();
+            
+            // Carregar dados iniciais (CSV, PDF, OFX) se não houver dados no banco local
+            if (localDB.clients.length === 0) {
+                loadInitialData();
+            } else {
+                renderDashboard();
+                renderClientList();
+                renderBillingList();
+                renderTransactionList();
+            }
+            
+            // Adicionar event listeners
+            setupEventListeners();
+        });
+
+        // Alternar tema
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+        // Configurar ícones de tema
+        function setThemeIcons() {
+            if (document.documentElement.classList.contains('dark')) {
+                themeToggleLightIcon.classList.remove('hidden');
+                themeToggleDarkIcon.classList.add('hidden');
+            } else {
+                themeToggleLightIcon.classList.add('hidden');
+                themeToggleDarkIcon.classList.remove('hidden');
+            }
+        }
+
+        themeToggleBtn.addEventListener('click', function() {
+            document.documentElement.classList.toggle('dark');
+            
+            // Salvar preferência no localStorage
+            localStorage.setItem('color-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+            
+            // Alternar ícones
+            setThemeIcons();
+        });
+
+        // Sistema de navegação em abas
+        function initTabNavigation() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const tabContents = document.querySelectorAll('main > .tab-content');
+            
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remover classe ativa de todas as abas
+                    navLinks.forEach(navLink => {
+                        navLink.classList.remove('active-nav');
+                    });
+                    
+                    // Adicionar classe ativa à aba clicada
+                    this.classList.add('active-nav');
+                    
+                    // Esconder todos os conteúdos
+                    tabContents.forEach(content => {
+                        content.classList.add('hidden');
+                    });
+                    
+                    // Mostrar conteúdo da aba selecionada
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(`${tabId}-tab`).classList.remove('hidden');
+                    
+                    // Executar funções específicas da aba se necessário
+                    if (tabId === 'dashboard') {
+                        renderDashboard();
+                    } else if (tabId === 'clients') {
+                        renderClientList();
+                    } else if (tabId === 'billing') {
+                        renderBillingList();
+                    } else if (tabId === 'financial') {
+                        renderTransactionList();
+                    }
+                });
+            });
+            
+            // Sistema de navegação secundária (detalhes do cliente)
+            const clientDetailTabs = document.querySelectorAll('.client-detail-tab');
+            const clientDetailContents = document.querySelectorAll('.client-detail-content');
+            
+            clientDetailTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remover classe ativa de todas as abas
+                    clientDetailTabs.forEach(detailTab => {
+                        detailTab.classList.remove('border-primary', 'text-primary');
+                        detailTab.classList.add('border-transparent');
+                    });
+                    
+                    // Adicionar classe ativa à aba clicada
+                    this.classList.add('border-primary', 'text-primary');
+                    this.classList.remove('border-transparent');
+                    
+                    // Esconder todos os conteúdos
+                    clientDetailContents.forEach(content => {
+                        content.classList.add('hidden');
+                    });
+                    
+                    // Mostrar conteúdo da aba selecionada
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(`${tabId}-tab`).classList.remove('hidden');
+                });
+            });
+            
+            // Botão de voltar dos detalhes do cliente
+            document.getElementById('back-to-clients').addEventListener('click', function() {
+                document.getElementById('client-details-tab').classList.add('hidden');
+                document.getElementById('clients-tab').classList.remove('hidden');
+            });
+        }
+
+        // Setup dos formulários de importação
+        function setupImportForms() {
+            // Configurar input de arquivo de clientes
+            const clientsFileInput = document.getElementById('clients-file');
+            const clientsFileInfo = document.getElementById('clients-file-info');
+            const clientsFilename = document.getElementById('clients-filename');
+            const importClientsBtn = document.getElementById('import-clients-btn');
+            
+            clientsFileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    clientsFilename.textContent = this.files[0].name;
+                    clientsFileInfo.classList.remove('hidden');
+                    importClientsBtn.disabled = false;
+                } else {
+                    clientsFileInfo.classList.add('hidden');
+                    importClientsBtn.disabled = true;
+                }
+            });
+            
+            // Importar clientes
+            importClientsBtn.addEventListener('click', function() {
+                const file = clientsFileInput.files[0];
+                if (!file) return;
+                
+                const fileExt = file.name.split('.').pop().toLowerCase();
+                const importStatusElement = document.getElementById('clients-import-status');
+                
+                importStatusElement.textContent = 'Importando...';
+                importStatusElement.classList.add('text-amber-500');
+                
+                if (fileExt === 'csv') {
+                    parseCSVFile(file, importedData => {
+                        localDB.clients = importedData;
+                        localDB.save();
+                        renderClientList();
+                        importStatusElement.textContent = `${importedData.length} clientes importados com sucesso!`;
+                        importStatusElement.classList.remove('text-amber-500');
+                        importStatusElement.classList.add('text-green-500');
+                        updateImportHistory('Clientes', file.name, importedData.length, 'Concluído');
+                    });
+                } else if (fileExt === 'xls' || fileExt === 'xlsx') {
+                    parseExcelFile(file, importedData => {
+                        localDB.clients = importedData;
+                        localDB.save();
+                        renderClientList();
+                        importStatusElement.textContent = `${importedData.length} clientes importados com sucesso!`;
+                        importStatusElement.classList.remove('text-amber-500');
+                        importStatusElement.classList.add('text-green-500');
+                        updateImportHistory('Clientes', file.name, importedData.length, 'Concluído');
+                    });
+                } else {
+                    importStatusElement.textContent = 'Formato de arquivo não suportado.';
+                    importStatusElement.classList.remove('text-amber-500');
+                    importStatusElement.classList.add('text-red-500');
+                }
+            });
+            
+            // Configurar input de arquivo de boletos
+            const boletosFileInput = document.getElementById('boletos-file');
+            const boletosFileInfo = document.getElementById('boletos-file-info');
+            const boletosFilename = document.getElementById('boletos-filename');
+            const importBoletosBtn = document.getElementById('import-boletos-btn');
+            
+            boletosFileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    boletosFilename.textContent = this.files[0].name;
+                    boletosFileInfo.classList.remove('hidden');
+                    importBoletosBtn.disabled = false;
+                } else {
+                    boletosFileInfo.classList.add('hidden');
+                    importBoletosBtn.disabled = true;
+                }
+            });
+            
+            // Importar boletos
+            importBoletosBtn.addEventListener('click', function() {
+                const file = boletosFileInput.files[0];
+                if (!file) return;
+                
+                const fileExt = file.name.split('.').pop().toLowerCase();
+                const importStatusElement = document.getElementById('boletos-import-status');
+                
+                importStatusElement.textContent = 'Importando...';
+                importStatusElement.classList.add('text-amber-500');
+                
+                if (fileExt === 'pdf') {
+                    parsePDFFile(file, importedData => {
+                        localDB.billings = importedData;
+                        localDB.save();
+                        renderBillingList();
+                        importStatusElement.textContent = `${importedData.length} boletos importados com sucesso!`;
+                        importStatusElement.classList.remove('text-amber-500');
+                        importStatusElement.classList.add('text-green-500');
+                        updateImportHistory('Boletos', file.name, importedData.length, 'Concluído');
+                    });
+                } else if (fileExt === 'csv') {
+                    parseCSVFile(file, importedData => {
+                        localDB.billings = importedData;
+                        localDB.save();
+                        renderBillingList();
+                        importStatusElement.textContent = `${importedData.length} boletos importados com sucesso!`;
+                        importStatusElement.classList.remove('text-amber-500');
+                        importStatusElement.classList.add('text-green-500');
+                        updateImportHistory('Boletos', file.name, importedData.length, 'Concluído');
+                    });
+                } else if (fileExt === 'rem' || fileExt === 'txt') {
+                    parseCNAB400File(file, importedData => {
+                        localDB.billings = importedData;
+                        localDB.save();
+                        renderBillingList();
+                        importStatusElement.textContent = `${importedData.length} boletos importados com sucesso!`;
+                        importStatusElement.classList.remove('text-amber-500');
+                        importStatusElement.classList.add('text-green-500');
+                        updateImportHistory('Boletos', file.name, importedData.length, 'Concluído');
+                    });
+                } else {
+                    importStatusElement.textContent = 'Formato de arquivo não suportado.';
+                    importStatusElement.classList.remove('text-amber-500');
+                    importStatusElement.classList.add('text-red-500');
+                }
+            });
+            
+            // Configurar input de arquivo de extrato
+            const extratoFileInput = document.getElementById('extrato-file');
+            const extratoFileInfo = document.getElementById('extrato-file-info');
+            const extratoFilename = document.getElementById('extrato-filename');
+            const importExtratoBtn = document.getElementById('import-extrato-btn');
+            
+            extratoFileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    extratoFilename.textContent = this.files[0].name;
+                    extratoFileInfo.classList.remove('hidden');
+                    importExtratoBtn.disabled = false;
+                } else {
+                    extratoFileInfo.classList.add('hidden');
+                    importExtratoBtn.disabled = true;
+                }
+            });
+            
+            // Importar extrato
+            importExtratoBtn.addEventListener('click', function() {
+                const file = extratoFileInput.files[0];
+                if (!file) return;
+                
+                const fileExt = file.name.split('.').pop().toLowerCase();
+                const importStatusElement = document.getElementById('extrato-import-status');
+                
+                importStatusElement.textContent = 'Importando...';
+                importStatusElement.classList.add('text-amber-500');
+                
+                if (fileExt === 'ofx') {
+                    parseOFXFile(file, importedData => {
+                        localDB.transactions = importedData.transactions;
+                        localDB.save();
+                        renderTransactionList();
+                        importStatusElement.textContent = `${importedData.transactions.length} transações importadas com sucesso!`;
+                        importStatusElement.classList.remove('text-amber-500');
+                        importStatusElement.classList.add('text-green-500');
+                        updateImportHistory('Extrato', file.name, importedData.transactions.length, 'Concluído');
+                    });
+                } else if (fileExt === 'csv') {
+                    parseCSVFile(file, importedData => {
+                        localDB.transactions = importedData;
+                        localDB.save();
+                        renderTransactionList();
+                        importStatusElement.textContent = `${importedData.length} transações importadas com sucesso!`;
+                        importStatusElement.classList.remove('text-amber-500');
+                        importStatusElement.classList.add('text-green-500');
+                        updateImportHistory('Extrato', file.name, importedData.length, 'Concluído');
+                    });
+                } else {
+                    importStatusElement.textContent = 'Formato de arquivo não suportado.';
+                    importStatusElement.classList.remove('text-amber-500');
+                    importStatusElement.classList.add('text-red-500');
+                }
+            });
+            
+            // Configurar input de arquivo de contratos
+            const contratosFileInput = document.getElementById('contratos-file');
+            const contratosFileInfo = document.getElementById('contratos-file-info');
+            const contratosFilename = document.getElementById('contratos-filename');
+            const importContratosBtn = document.getElementById('import-contratos-btn');
+            
+            contratosFileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    contratosFilename.textContent = this.files[0].name;
+                    contratosFileInfo.classList.remove('hidden');
+                    importContratosBtn.disabled = false;
+                } else {
+                    contratosFileInfo.classList.add('hidden');
+                    importContratosBtn.disabled = true;
+                }
+            });
+            
+            // Importar contratos
+            importContratosBtn.addEventListener('click', function() {
+                const file = contratosFileInput.files[0];
+                if (!file) return;
+                
+                const fileExt = file.name.split('.').pop().toLowerCase();
+                const importStatusElement = document.getElementById('contratos-import-status');
+                
+                importStatusElement.textContent = 'Importando...';
+                importStatusElement.classList.add('text-amber-500');
+                
+                if (fileExt === 'xls' || fileExt === 'xlsx') {
+                    parseExcelFile(file, importedData => {
+                        localDB.contracts = importedData;
+                        localDB.save();
+                        importStatusElement.textContent = `${importedData.length} contratos importados com sucesso!`;
+                        importStatusElement.classList.remove('text-amber-500');
+                        importStatusElement.classList.add('text-green-500');
+                        updateImportHistory('Contratos', file.name, importedData.length, 'Concluído');
+                    });
+                } else if (fileExt === 'pdf') {
+                    parsePDFFile(file, importedData => {
+                        localDB.contracts = importedData;
+                        localDB.save();
+                        importStatusElement.textContent = `${importedData.length} contratos importados com sucesso!`;
+                        importStatusElement.classList.remove('text-amber-500');
+                        importStatusElement.classList.add('text-green-500');
+                        updateImportHistory('Contratos', file.name, importedData.length, 'Concluído');
+                    });
+                } else {
+                    importStatusElement.textContent = 'Formato de arquivo não suportado.';
+                    importStatusElement.classList.remove('text-amber-500');
+                    importStatusElement.classList.add('text-red-500');
+                }
+            });
+        }
+
+        // Funções de parsing de arquivos
+        function parseCSVFile(file, callback) {
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                const csvData = event.target.result;
+                const data = Papa.parse(csvData, {
+                    header: true,
+                    skipEmptyLines: true,
+                    delimiter: ';'
+                }).data;
+                
+                callback(data);
+            };
+            
+            reader.onerror = function() {
+                console.error('Erro ao ler arquivo CSV');
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        function parseExcelFile(file, callback) {
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                const data = new Uint8Array(event.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                // Obter a primeira planilha
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                
+                // Converter para JSON
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                
+                // Processar dados (assumindo que a primeira linha é o cabeçalho)
+                const header = jsonData[0];
+                const result = [];
+                
+                for (let i = 1; i < jsonData.length; i++) {
+                    const row = jsonData[i];
+                    const obj = {};
+                    
+                    for (let j = 0; j < header.length; j++) {
+                        obj[header[j]] = row[j];
+                    }
+                    
+                    result.push(obj);
+                }
+                
+                callback(result);
+            };
+            
+            reader.onerror = function() {
+                console.error('Erro ao ler arquivo Excel');
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function parsePDFFile(file, callback) {
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                const typedArray = new Uint8Array(event.target.result);
+                
+                pdfjsLib.getDocument(typedArray).promise.then(function(pdf) {
+                    let textContent = '';
+                    
+                    // Função para extrair texto de cada página
+                    function getPageText(pageNum) {
+                        return pdf.getPage(pageNum).then(function(page) {
+                            return page.getTextContent().then(function(content) {
+                                const strings = content.items.map(item => item.str);
+                                return strings.join(' ');
+                            });
+                        });
+                    }
+                    
+                    // Extrair texto de todas as páginas
+                    const pagePromises = [];
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        pagePromises.push(getPageText(i));
+                    }
+                    
+                    Promise.all(pagePromises).then(function(pageTexts) {
+                        const fullText = pageTexts.join('\n');
+                        
+                        // Analisar o texto do PDF para extrair dados
+                        const parsedData = parsePDFText(fullText);
+                        callback(parsedData);
+                    });
+                }).catch(function(error) {
+                    console.error('Erro ao processar PDF:', error);
+                });
+            };
+            
+            reader.onerror = function() {
+                console.error('Erro ao ler arquivo PDF');
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function parseOFXFile(file, callback) {
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                const ofxText = event.target.result;
+                const data = parseOFX(ofxText);
+                callback(data);
+            };
+            
+            reader.onerror = function() {
+                console.error('Erro ao ler arquivo OFX');
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        function parseCNAB400File(file, callback) {
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                const cnabText = event.target.result;
+                const lines = cnabText.split('\n');
+                const data = [];
+                
+                // Processar cada linha do arquivo CNAB 400
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    
+                    // Ignorar linhas vazias
+                    if (!line) continue;
+                    
+                    // Processar o registro (depende da estrutura CNAB400 específica)
+                    // Este é um exemplo simplificado
+                    if (line.charAt(0) === '1') { // Registro de detalhe
+                        const record = {
+                            nossoNumero: line.substring(62, 72),
+                            dataEmissao: formatCNABDate(line.substring(110, 116)),
+                            dataVencimento: formatCNABDate(line.substring(146, 152)),
+                            valor: (parseInt(line.substring(152, 165)) / 100).toFixed(2),
+                            pagador: line.substring(324, 364).trim(),
+                            situacao: 'EM CARTEIRA'
+                        };
+                        
+                        data.push(record);
+                    }
+                }
+                
+                callback(data);
+            };
+            
+            reader.onerror = function() {
+                console.error('Erro ao ler arquivo CNAB 400');
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        // Função auxiliar para formatar data do CNAB
+        function formatCNABDate(dateStr) {
+            // CNAB geralmente usa o formato DDMMAA
+            if (dateStr.length === 6) {
+                const day = dateStr.substring(0, 2);
+                const month = dateStr.substring(2, 4);
+                const year = '20' + dateStr.substring(4, 6); // Assumindo anos 2000+
+                return `${day}/${month}/${year}`;
+            }
+            return dateStr;
+        }
+        
+        // Função para atualizar o histórico de importações
+        function updateImportHistory(type, filename, records, status) {
+            const historyTable = document.getElementById('import-history');
+            const now = new Date();
+            const formattedDate = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            
+            // Criar nova linha no início da tabela
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm">${formattedDate}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">${type}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">${filename}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">${records}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        ${status}
+                    </span>
+                </td>
+            `;
+            
+            // Inserir no início da tabela
+            if (historyTable.querySelector('tbody')) {
+                historyTable.querySelector('tbody').prepend(newRow);
+            } else {
+                historyTable.prepend(newRow);
+            }
+        }
+
+        // Função para configurar todos os event listeners
+        function setupEventListeners() {
+            // Novo cliente
+            document.getElementById('new-client-btn').addEventListener('click', function() {
+                console.log('Novo cliente');
+                // Implementar lógica para abrir formulário de novo cliente
+            });
+            
+            // Exportar clientes
+            document.getElementById('export-clients-btn').addEventListener('click', function() {
+                console.log('Exportar clientes');
+                // Implementar lógica para exportar clientes
+            });
+            
+            // Pesquisa de cliente
+            document.getElementById('client-search').addEventListener('input', function() {
+                filterClients();
+            });
+            
+            // Filtro de cidade
+            document.getElementById('city-filter').addEventListener('change', function() {
+                filterClients();
+            });
+            
+            // Filtro de status
+            document.getElementById('status-filter').addEventListener('change', function() {
+                filterClients();
+            });
+            
+            // Novo boleto
+            document.getElementById('new-billing-btn').addEventListener('click', function() {
+                console.log('Novo boleto');
+                // Implementar lógica para criar novo boleto
+            });
+            
+            // Gerar cobrança mensal
+            document.getElementById('generate-billing-btn').addEventListener('click', function() {
+                console.log('Gerar cobrança mensal');
+                // Implementar lógica para gerar cobrança mensal
+            });
+            
+            // Nova transação
+            document.getElementById('new-transaction-btn').addEventListener('click', function() {
+                console.log('Nova transação');
+                // Implementar lógica para nova transação
+            });
+            
+            // Exportar extrato
+            document.getElementById('export-statement-btn').addEventListener('click', function() {
+                console.log('Exportar extrato');
+                // Implementar lógica para exportar extrato
+            });
+            
+            // Backup do banco de dados
+            document.getElementById('backup-db-btn').addEventListener('click', function() {
+                console.log('Backup do banco de dados');
+                // Implementar lógica para backup do banco de dados
+            });
+            
+            // Restaurar backup
+            document.getElementById('restore-db-btn').addEventListener('click', function() {
+                console.log('Restaurar backup');
+                // Implementar lógica para restaurar backup
+            });
+            
+            // Limpar todos os dados
+            document.getElementById('clear-data-btn').addEventListener('click', function() {
+                if (confirm('Tem certeza que deseja limpar todos os dados? Esta ação não pode ser desfeita.')) {
+                    localStorage.removeItem('amplaDB');
+                    location.reload();
+                }
+            });
+            
+            // Edição de tema nas configurações
+            document.getElementById('theme-select').addEventListener('change', function() {
+                const value = this.value;
+                
+                if (value === 'light') {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('color-theme', 'light');
+                } else if (value === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('color-theme', 'dark');
+                } else {
+                    // Auto - usar preferência do sistema
+                    localStorage.removeItem('color-theme');
+                    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                }
+                
+                setThemeIcons();
+            });
+        }
+
+        // Função para carregar dados iniciais do CSV, PDF e OFX
+        function loadInitialData() {
+            // Dados de clientes CSV
+            const clientsCSV = `Tipo;Agencia;Posto;Cod Pagador;Nome;Cod Assoc;Cod Beneficiario;Debauto;Endereco;Identif;Tipo Pessoa;Uf;Cep;Cidade;Email;Nome Contato;Beneficiario;Grupo Pagador;Telefone;Origem;Praca;
+PAGADOR;3950;13;018QX;D ANGE 2 COMERCIO DE BICHO DE PELUCIA;000000; ;N;AV T10 N; 1300 QD. A LT 10PISO 01;52474052000101;0;GO;74223-060;GOIANIA; ;;00495; ; ;;017270;
+PAGADOR;3950;13;018U0;ANAPOLIS SERVIÇOS DE VISTORIAS LTDA;000000; ;N;AV PINHEIRO CHAGAS 140 JUNDIAI;43313437000198;0;GO;75110-580;ANAPOLIS; ;;00495; ; ;;017255;
+PAGADOR;3950;13;018T2;ENGEMAN LINEU PEDRODO DE MORAES SERVIÇOS;000000; ;N;ROD SEBASTIAO FERRAZ CAMARGO PENTEADO;01091562000150;0;SP;18320-000;APIAI; ;;00495; ; ;;014359;
+PAGADOR;3950;13;018Q9;PM ADMINISTRACAO E SERVIÇOS LTDA;000000; ;N;AV ARAGUAIA 270 CENTRO;46011869000132;0;GO;74030-075;GOIANIA; ;;00495; ; ;;017270;
+PAGADOR;3950;13;018R8;JJC PRESTADORA DE SERVIÇOS LTDA;000000; ;N;AV MONTREAL 156 QD. 1 LT 12 SL 01 RES MO;41414660000104;0;GO;74370-610;GOIANIA; ;;00495; ; ;;017270;
+PAGADOR;3950;13;018TZ;CENTRO OESTE SERVIÇOS DE VISTORIAS LTDA;000000; ;N;AV T2 1766 QD. 34 LT. 13 SL 03;36457937000138;0;GO;74215-005;GOIANIA; ;;00495; ; ;;017270;
+PAGADOR;3950;13;018TF;DISTRIBUIDORA PET MILHOMEM LTDA;000000; ;N;RUA DAS ROSAS QD. 123 LT 12 PQ INDUSTRIA;51859330000178;0;GO;74375-155;GOIANIA; ;;00495; ; ;;017270;
+PAGADOR;3950;13;018TE;MATA PRAGAS CONTROLE DE PAGAS LTDA;000000; ;N;AV MONTREAL 156 QD. 01  LT 12;07119310000179;0;GO;74370-610;GOIANIA; ;;00495; ; ;;017270;
+PAGADOR;3950;13;018Q7;CENTRO DE TRANSPLANTE CAPILAR LTDA;000000; ;N;AV ARAGUAIA 270 QD39 LT 42 SL03 CENTRO;39875746000184;0;GO;74030-075;GOIANIA; ;;00495; ; ;;017270;
+PAGADOR;3950;13;018TX;PROMONT MANUTENCAO INDUSTRIAL LTDA;000000; ;N;AV CASTRO ALVES SN QD, 17 LT 14 MARIA FR;01588861000103;0;GO;76195-000;CEZARINA; ;;00495; ; ;;017472;
+PAGADOR;3950;13;00P0Q;AMANDA CAROLINA LIMA DE ALMEIDA;000000; ;N;RUA P-30 N. 266 ST DOS FUNCIONARIOS;37858890000187;0;GO;74543-440;GOIANIA; ;;00495; ; ;;017270;
+PAGADOR;3950;13;008O7;NOVA JERUSALEM  HOTEL E TURISMO LTDA ME;000000; ;N;RUA 69 N. 243 QD.168 LT. 10;16937398000127;0;GO;74063-340;GOIANIA; ;;00495; ; ;;017270;
+PAGADOR;3950;13;00ON7;AMAGU CAR LTDA;000000; ;N;RUA 510 N. 36 ST CENTRO OESTE;37885054000191;0;GO;74550-145;GOIANIA; ;;00495; ; ;;017270;
+PAGADOR;3950;13;00ONQ;AGROPECUARIA IZA LTDA;000000; ;N;ROD GO 468 ZONA RURAL VILA BOA;37537319000160;0;GO;73825-000;VILA BOA; ;;00495; ; ;;017474;
+PAGADOR;3950;13;00NU6;ROBSON DE LUCCA;000000; ;N;AVENIDA PRIMEIRA AVENIDA N. 206;51392917972;0;GO;74605-020;GOIANIA; ;;00495; ; ;;017270;
+`;
+
+            // Dados de boletos do PDF
+            const paymentsPDF = `Cooperativa: 3950
+Conta Corrente: 278068
+Impresso em 19/05/2025 10:32:57
+Relatório de Boletos
+Dados Referentes ao período de:01/04/2025 a 30/04/2025
+Consulta Por:Data de Emissão
+Carteira:Todas
+Situação do Boleto:Todos
+Quantidade de Boletos:100
+Valor Total R$:117.882,38
+Valor Total Liquidação R$:89.129,15
+Situação
+SIMPLES 0025200343 25/200343-9 ACTION SOLUCOES INDUSTRIAIS
+LTDA 28/04/2025 10/05/2025 12.143,72 12.143,72 LIQUIDADO COMPE
+SIMPLES 0025200344 25/200344-7 AGROPECUARIA ADM LTDA 28/04/2025 05/05/2025 537,50 548,30 LIQUIDADO COMPE
+SIMPLES 0025200345 25/200345-5 AGROPECUARIA SCA LTDA 28/04/2025 05/05/2025 537,50 548,30 LIQUIDADO COMPE
+SIMPLES 0025200346 25/200346-3 ALLIANCE EMPREENDIMENTOS LTDA 28/04/2025 05/05/2025 1.518,00 0,00 VENCIDO
+SIMPLES 0025200347 25/200347-1 AMAGU FESTAS LTDA 28/04/2025 05/05/2025 759,00 0,00 BAIXADO POR
+SOLICITACAO
+SIMPLES 0025200348 25/200348-0 AMETISTA GESTAO EMPRESARIAL
+LTDA 28/04/2025 15/05/2025 375,73 375,73 LIQUIDADO COMPE
+SIMPLES 0025200349 25/200349-8 AMG INDUSTRIA E COMERCIO DE
+GESSO LTDA 28/04/2025 10/05/2025 2.322,80 2.322,80 LIQUIDADO COMPE
+SIMPLES 0025200350 25/200350-1 ANAPOLIS SERVIÇOS DE VISTORIAS
+LTDA 28/04/2025 21/05/2025 1.500,00 0,00 EM CARTEIRA`;
+
+            // Dados de transações do OFX
+            const ofxExtract = `OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+SECURITY:NONE
+ENCODING:USASCII
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILEUID:NONE
+NEWFILEUID:NONE
+
+<OFX>
+<SIGNONMSGSRSV1>
+<SONRS>
+<STATUS>
+<CODE>0</CODE>
+<SEVERITY>INFO</SEVERITY>
+</STATUS>
+<DTSERVER>20250519102941[-3:GMT]</DTSERVER>
+<LANGUAGE>ENG</LANGUAGE>
+<FI>
+<ORG>COOP.CRED.POUP.INV. DO CERRADO</ORG>
+<FID>COOP.CRED.POUP.INV. DO CERRADO</FID>
+</FI>
+</SONRS>
+</SIGNONMSGSRSV1>
+<BANKMSGSRSV1>
+<STMTTRNRS>
+<TRNUID>1</TRNUID>
+<STATUS>
+<CODE>0</CODE>
+<SEVERITY>INFO</SEVERITY>
+</STATUS>
+<STMTRS>
+<CURDEF>BRL</CURDEF>
+<BANKACCTFROM>
+<BANKID>748</BANKID>
+<ACCTID>39500000000278068</ACCTID>
+<ACCTTYPE>CHECKING</ACCTTYPE>
+</BANKACCTFROM>
+<BANKTRANLIST>
+<DTSTART>20250501000000[-3:GMT]</DTSTART>
+<DTEND>20250519000000[-3:GMT]</DTEND>
+<STMTTRN>
+<TRNTYPE>CREDIT</TRNTYPE>
+<DTPOSTED>20250502000000[-3:GMT]</DTPOSTED>
+<TRNAMT>4158.01</TRNAMT>
+<FITID>17714899780</FITID>
+<REFNUM>17714899780</REFNUM>
+<MEMO>LIQ.COBRANCA SIMPLES-COB000003 </MEMO>
+</STMTTRN>
+<STMTTRN>
+<TRNTYPE>DEBIT</TRNTYPE>
+<DTPOSTED>20250502000000[-3:GMT]</DTPOSTED>
+<TRNAMT>-355.00</TRNAMT>
+<FITID>17715614936</FITID>
+<REFNUM>17715614936</REFNUM>
+<MEMO>PAGAMENTO PIX-PIX_DEB   04939274000100 FEST MESA E CIA</MEMO>
+</STMTTRN>
+<STMTTRN>
+<TRNTYPE>DEBIT</TRNTYPE>
+<DTPOSTED>20250502000000[-3:GMT]</DTPOSTED>
+<TRNAMT>-190.00</TRNAMT>
+<FITID>17715616303</FITID>
+<REFNUM>17715616303</REFNUM>
+<MEMO>PAGAMENTO PIX-PIX_DEB   97163988168 Vonoria AmÃ©lia da ConceiÃ§Ã£o</MEMO>
+</STMTTRN>
+<STMTTRN>
+<TRNTYPE>DEBIT</TRNTYPE>
+<DTPOSTED>20250502000000[-3:GMT]</DTPOSTED>
+<TRNAMT>-6100.00</TRNAMT>
+<FITID>17719539293</FITID>
+<REFNUM>17719539293</REFNUM>
+<MEMO>PAGAMENTO PIX-PIX_DEB   93140290691 ADIMERSON ALVES DA COSTA</MEMO>
+</STMTTRN>
+<STMTTRN>
+<TRNTYPE>CREDIT</TRNTYPE>
+<DTPOSTED>20250505000000[-3:GMT]</DTPOSTED>
+<TRNAMT>375.00</TRNAMT>
+<FITID>17758512946</FITID>
+<REFNUM>17758512946</REFNUM>
+<MEMO>RECEBIMENTO PIX-PIX_CRED  28792279000102 A.I EMPREENDIMENTOS LTDA</MEMO>
+</STMTTRN>
+<STMTTRN>
+<TRNTYPE>CREDIT</TRNTYPE>
+<DTPOSTED>20250505000000[-3:GMT]</DTPOSTED>
+<TRNAMT>22300.00</TRNAMT>
+<FITID>17759216616</FITID>
+<REFNUM>17759216616</REFNUM>
+<MEMO>RECEBIMENTO PIX-PIX_CRED  23893032000169 AMPLA CONTABILIDADE</MEMO>
+</STMTTRN>
+</BANKTRANLIST>
+<LEDGERBAL>
+<BALAMT>25771.11</BALAMT>
+<DTASOF>20250519000000</DTASOF>
+</LEDGERBAL>
+</STMTRS>
+</STMTTRNRS>
+</BANKMSGSRSV1>
+</OFX>`;
+
+            // Processar dados de clientes
+            localDB.clients = parseCSV(clientsCSV);
+            
+            // Processar dados de boletos
+            localDB.billings = parsePDFText(paymentsPDF);
+            
+            // Processar dados de transações
+            const ofxData = parseOFX(ofxExtract);
+            localDB.transactions = ofxData.transactions;
+            
+            // Preencher contratos básicos para clientes
+            localDB.clients.forEach(client => {
+                const valor = Math.floor(Math.random() * 5 + 1) * 189.75; // Valor aleatório entre R$ 189,75 e R$ 948,75
+                localDB.contracts.push({
+                    clientCode: client['Cod Pagador'],
+                    clientName: client.Nome,
+                    startDate: '01/01/2025',
+                    value: valor.toFixed(2),
+                    dueDay: (Math.floor(Math.random() * 25) + 5).toString(), // Dia aleatório entre 5 e 30
+                    status: 'Ativo',
+                    description: 'Serviços: Contabilidade, Fiscal, DP. Contrato vigente por tempo indeterminado.'
+                });
+            });
+            
+            // Salvar no localStorage
+            localDB.save();
+            
+            // Renderizar
+            renderDashboard();
+            renderClientList();
+            renderBillingList();
+            renderTransactionList();
+        }
+
+        // Função para analisar CSV
+        function parseCSV(csvText) {
+            // Usar o Papa Parse para análise de CSV
+            const result = Papa.parse(csvText, {
+                header: true,
+                skipEmptyLines: true,
+                delimiter: ';'
+            });
+            
+            return result.data.filter(row => row.Tipo && row.Nome);
+        }
+
+        // Função para analisar o texto do PDF de boletos
+        function parsePDFText(pdfText) {
+            const lines = pdfText.split('\n');
+            const data = [];
+            
+            // Encontrar onde começa a tabela
+            let tableStartIndex = -1;
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].includes('Cart. Nº Doc Nosso Nº Pagador')) {
+                    tableStartIndex = i + 1;
+                    break;
+                }
+            }
+            
+            if (tableStartIndex === -1) return [];
+            
+            // Analisar cada linha
+            let currentPayment = {};
+            
+            for (let i = tableStartIndex; i < lines.length; i++) {
+                const line = lines[i].trim();
+                
+                // Pular repetições de cabeçalho
+                if (line.startsWith('Beneficiário') || line.startsWith('Cart. Nº Doc')) continue;
+                
+                if (line.startsWith('SIMPLES')) {
+                    // Início de um novo pagamento
+                    if (Object.keys(currentPayment).length > 0) {
+                        data.push(currentPayment);
+                    }
+                    
+                    const parts = line.split(' ');
+                    currentPayment = {
+                        tipo: parts[0],
+                        documento: parts[1],
+                        nossoNumero: parts[2]
+                    };
+                } else if (currentPayment && Object.keys(currentPayment).length > 0) {
+                    // Continuar analisando o pagamento atual
+                    const payerMatch = line.match(/^(.*?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+([0-9,.]+)\s+([0-9,.]*)\s+(.*)$/);
+                    
+                    if (payerMatch) {
+                        currentPayment.pagador = payerMatch[1].trim();
+                        currentPayment.dataEmissao = payerMatch[2];
+                        currentPayment.dataVencimento = payerMatch[3];
+                        currentPayment.valor = payerMatch[4].replace('.', '').replace(',', '.');
+                        currentPayment.liquidacao = payerMatch[5] ? payerMatch[5].replace('.', '').replace(',', '.') : '0.00';
+                        currentPayment.situacao = payerMatch[6].trim();
+                    }
+                }
+            }
+            
+            // Adicionar o último pagamento
+            if (Object.keys(currentPayment).length > 0) {
+                data.push(currentPayment);
+            }
+            
+            return data;
+        }
+
+        // Função para analisar OFX
+        function parseOFX(ofxText) {
+            const transactions = [];
+            
+            // Extrair transações
+            const stmtTrnRegex = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/g;
+            let match;
+            
+            while ((match = stmtTrnRegex.exec(ofxText)) !== null) {
+                const trnBlock = match[1];
+                
+                const typeMatch = /<TRNTYPE>(.*?)<\/TRNTYPE>/.exec(trnBlock);
+                const dateMatch = /<DTPOSTED>(.*?)<\/DTPOSTED>/.exec(trnBlock);
+                const amountMatch = /<TRNAMT>(.*?)<\/TRNAMT>/.exec(trnBlock);
+                const memoMatch = /<MEMO>(.*?)<\/MEMO>/.exec(trnBlock);
+                
+                if (typeMatch && dateMatch && amountMatch) {
+                    const type = typeMatch[1];
+                    // Converter data de YYYYMMDD para YYYY-MM-DD
+                    const dateStr = dateMatch[1].substring(0, 8);
+                    const year = dateStr.substring(0, 4);
+                    const month = dateStr.substring(4, 6);
+                    const day = dateStr.substring(6, 8);
+                    const formattedDate = `${year}-${month}-${day}`;
+                    
+                    const amount = parseFloat(amountMatch[1]);
+                    const memo = memoMatch ? memoMatch[1] : '';
+                    
+                    transactions.push({
+                        type,
+                        date: formattedDate,
+                        amount,
+                        memo
+                    });
+                }
+            }
+            
+            // Extrair saldo
+            const balanceMatch = /<LEDGERBAL>[\s\S]*?<BALAMT>(.*?)<\/BALAMT>/.exec(ofxText);
+            const balance = balanceMatch ? parseFloat(balanceMatch[1]) : 0;
+            
+            return {
+                transactions,
+                balance
+            };
+        }
+
+        // Função para renderizar o dashboard
+        function renderDashboard() {
+            // Atualizar contadores
+            document.getElementById('dashboard-client-count').textContent = localDB.clients.length;
+            document.getElementById('dashboard-active-clients').textContent = localDB.clients.length;
+            
+            // Calcular valores para faturamento
+            const totalBilling = localDB.billings.reduce((sum, billing) => sum + parseFloat(billing.valor || 0), 0);
+            const totalLiquidated = localDB.billings.reduce((sum, billing) => {
+                return sum + (billing.situacao.includes('LIQUIDADO') ? parseFloat(billing.liquidacao || 0) : 0);
+            }, 0);
+            
+            document.getElementById('dashboard-monthly-revenue').textContent = totalBilling.toFixed(2);
+            document.getElementById('dashboard-received').textContent = totalLiquidated.toFixed(2);
+            
+            // Saldo bancário - obtido do OFX ou valor padrão
+            const balance = 25771.11; // Valor padrão ou obtido do OFX
+            document.getElementById('dashboard-balance').textContent = balance.toFixed(2);
+            
+            // Renderizar gráfico de status de pagamentos
+            const statusCounts = {};
+            localDB.billings.forEach(payment => {
+                statusCounts[payment.situacao] = (statusCounts[payment.situacao] || 0) + 1;
+            });
+            
+            const statusLabels = Object.keys(statusCounts);
+            const statusData = statusLabels.map(label => statusCounts[label]);
+            
+            const statusColors = statusLabels.map(label => {
+                if (label.includes('LIQUIDADO')) return '#10B981';
+                if (label.includes('VENCIDO')) return '#EF4444';
+                if (label.includes('EM CARTEIRA')) return '#3B82F6';
+                if (label.includes('BAIXADO')) return '#6B7280';
+                return '#8B5CF6';
+            });
+            
+            const statusChartCtx = document.getElementById('payment-status-chart').getContext('2d');
+            if (window.statusChart) {
+                window.statusChart.destroy();
+            }
+
+            window.statusChart = new Chart(statusChartCtx, {
+                type: 'pie',
+                data: {
+                    labels: statusLabels,
+                    datasets: [{
+                        data: statusData,
+                        backgroundColor: statusColors
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: document.documentElement.classList.contains('dark') ? '#E5E7EB' : '#374151'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Renderizar gráfico de faturamento x recebimento
+            const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'];
+            const revenueData = [92000, 87500, 103000, 97500, 117882, 0];
+            const receivedData = [89000, 85000, 98000, 94000, 89129, 0];
+            
+            const revenueChartCtx = document.getElementById('revenue-chart').getContext('2d');
+            if (window.revenueChart) {
+                window.revenueChart.destroy();
+            }
+            
+            window.revenueChart = new Chart(revenueChartCtx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [
+                        {
+                            label: 'Faturado',
+                            data: revenueData,
+                            borderColor: '#3B82F6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Recebido',
+                            data: receivedData,
+                            borderColor: '#10B981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: document.documentElement.classList.contains('dark') ? '#E5E7EB' : '#374151'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: document.documentElement.classList.contains('dark') ? '#E5E7EB' : '#374151'
+                            },
+                            grid: {
+                                color: document.documentElement.classList.contains('dark') ? '#374151' : '#E5E7EB'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: document.documentElement.classList.contains('dark') ? '#E5E7EB' : '#374151'
+                            },
+                            grid: {
+                                color: document.documentElement.classList.contains('dark') ? '#374151' : '#E5E7EB'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Renderizar boletos a vencer
+            const upcomingPayments = document.getElementById('upcoming-payments');
+            
+            // Filtrar boletos em carteira
+            const pendingPayments = localDB.billings.filter(payment => 
+                payment.situacao === 'EM CARTEIRA' || 
+                (payment.situacao === 'VENCIDO' && !parseFloat(payment.liquidacao))
+            );
+            
+            upcomingPayments.innerHTML = '';
+            
+            if (pendingPayments.length === 0) {
+                upcomingPayments.innerHTML = `<tr><td colspan="4" class="px-6 py-4 text-center">Nenhum boleto pendente encontrado</td></tr>`;
+                return;
+            }
+            
+            // Ordenar por data de vencimento
+            pendingPayments.sort((a, b) => {
+                const dateA = new Date(a.dataVencimento.split('/').reverse().join('-'));
+                const dateB = new Date(b.dataVencimento.split('/').reverse().join('-'));
+                return dateA - dateB;
+            });
+            
+            // Mostrar até 5 boletos pendentes
+            const displayPayments = pendingPayments.slice(0, 5);
+            
+            displayPayments.forEach(payment => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 dark:hover:bg-gray-800';
+                
+                // Status do boleto
+                let statusClass = '';
+                if (payment.situacao === 'VENCIDO') {
+                    statusClass = 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+                } else {
+                    statusClass = 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+                }
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${payment.pagador}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${payment.dataVencimento}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">R$ ${parseFloat(payment.valor).toFixed(2)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                            ${payment.situacao}
+                        </span>
+                    </td>
+                `;
+                
+                upcomingPayments.appendChild(row);
+            });
+        }
+
+        // Função para renderizar a lista de clientes
+        function renderClientList() {
+            const clientList = document.getElementById('client-list');
+            
+            // Limpar lista
+            clientList.innerHTML = '';
+            
+            // Verificar se há clientes
+            if (localDB.clients.length === 0) {
+                clientList.innerHTML = `<tr><td colspan="7" class="px-6 py-4 text-center">Nenhum cliente encontrado</td></tr>`;
+                document.getElementById('client-count').textContent = 0;
+                return;
+            }
+            
+            // Preencher dropdown de cidades
+            const cityFilter = document.getElementById('city-filter');
+            cityFilter.innerHTML = '<option value="">Todas as Cidades</option>';
+            
+            const cities = [...new Set(localDB.clients.map(client => client.Cidade))].filter(Boolean).sort();
+            cities.forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                cityFilter.appendChild(option);
+            });
+            
+            // Renderizar cada cliente
+            localDB.clients.forEach(client => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 dark:hover:bg-gray-800';
+                row.setAttribute('data-client-id', client['Cod Pagador']);
+                
+                // Status (simulação - todos ativos)
+                const statusClass = 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+                const status = 'Ativo';
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${client['Cod Pagador'] || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${client.Nome || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${client.Identif || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${client.Cidade || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${client.Uf || ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                            ${status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <button class="view-client-btn text-primary hover:text-primary-dark mr-2" data-client-id="${client['Cod Pagador']}">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                        </button>
+                        <button class="edit-client-btn text-blue-500 hover:text-blue-700 mr-2" data-client-id="${client['Cod Pagador']}">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </button>
+                        <button class="delete-client-btn text-red-500 hover:text-red-700" data-client-id="${client['Cod Pagador']}">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </td>
+                `;
+                
+                clientList.appendChild(row);
+            });
+            
+            document.getElementById('client-count').textContent = localDB.clients.length;
+            
+            // Adicionar event listeners para botões de ação
+            document.querySelectorAll('.view-client-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const clientId = this.getAttribute('data-client-id');
+                    viewClientDetails(clientId);
+                });
+            });
+            
+            document.querySelectorAll('.edit-client-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const clientId = this.getAttribute('data-client-id');
+                    console.log('Editar cliente:', clientId);
+                    // Implementar lógica para editar cliente
+                });
+            });
+            
+            document.querySelectorAll('.delete-client-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const clientId = this.getAttribute('data-client-id');
+                    if (confirm('Tem certeza que deseja excluir este cliente?')) {
+                        deleteClient(clientId);
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+</html>
